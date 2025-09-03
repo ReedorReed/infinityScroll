@@ -1,0 +1,19 @@
+#container {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 20px;
+	padding: 5rem;
+}
+
+
+.movie-poster {
+	inline-size: 430px;
+}
+
+.movie-card {
+	opacity: 0;
+}
+
+.movie-card.show {
+	opacity: 1;
+}

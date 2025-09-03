@@ -1,53 +1,89 @@
 const container = document.getElementById('container');
 const API_KEY = '04daff3fa75e2bed2797e93795e233d0';
 const BASE_URL = 'https://api.themoviedb.org/3';
-const IMAGE_BASE_URL = 'https://image.tmdb.org/t/media/';
+const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/';
+let page = 1;
 
-console.log(container);
-
-const getPopMovies = async () => {
-	try {
-		const response = await fetch(
-			`${BASE_URL}/movie/popular?api_key=${API_KEY}`
-		);
-
-		const data = await response.json();
-		handleData(data);
-		return data;
-	} catch (error) {
-		console.log('not working yet');
+const options = {
+	method: 'GET',
+	headers: {
+		accept: 'application/json',
+		Authorization:
+			'Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIwNGRhZmYzZmE3NWUyYmVkMjc5N2U5Mzc5NWUyMzNkMCIsIm5iZiI6MTc1NDU3MDQwMi44NDgsInN1YiI6IjY4OTQ5ZWEyNTgwOGQ2MTVlNDkyMjNlYSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.izL8ZRorjEdMvkctVUiMmYb0eu93iytVt1nvjRBZNfY'
 	}
 };
 
+fetchMovies(page);
 
-function handleData(data) {
-	container.innerHTML = '';
+// Observer
+const showObserver = new IntersectionObserver((entries) => {
+	entries.forEach((entry) => {
+		if (entry.isIntersecting) {
+			entry.target.classList.toggle('show');
+			showObserver.unobserve(entry.target);
+		}
+	});
+});
 
-	const movieGrid = document.createElement('div');
-	movieGrid.className = 'movie-grid';
+const lastCardObserver = new IntersectionObserver(
+	(entries) => {
+		const lastCard = entries[0];
+		if (!lastCard.isIntersecting) return;
+		lastCardObserver.unobserve(lastCard.target);
+		page++;
+		fetchMovies(page);
 
-	const movieCards = data.results
-		.map((movie) => {
-			return /*html */ `
-            <div class="movie-card" data-movie-id="${movie.id}">
-                <img src="${IMAGE_BASE_URL}w500${movie.poster_path}" alt="${
-				movie.title
-			}" class="movie-poster">
-                <div class="movie-info">
-                    <h2 class="movie-title">${movie.title}</h2>
-                    <p class="movie-rating">★ ${movie.vote_average.toFixed(
-											1
-										)}</p>
-                    <p class="movie-overview">${movie.overview}</p>
-                    <p class="movie-date">Release: ${movie.release_date}</p>
-                </div>
-            </div>
-        `;
+		lastCardObserver.unobserve(lastCard.target);
+	},
+	{
+		threshold: 0.5
+	}
+);
+
+function fetchMovies(pageNumber) {
+	const url = `https://api.themoviedb.org/3/movie/popular?language=en-US&page=${pageNumber}`;
+	fetch(url, options)
+		.then((res) => res.json())
+		.then((data) => {
+            appendMovies(data.results);
+            console.log(data);
 		})
-		.join('');
-
-	movieGrid.innerHTML = movieCards;
-	console.log(movieGrid);
-
-	container.insertAdjacentHTML('beforeend', movieGrid);
+		.catch((err) => console.error(err));
 }
+
+function appendMovies(movies) {
+	const fragment = document.createDocumentFragment();
+
+	movies.forEach((movie) => {
+		const card = document.createElement('div');
+		card.classList.add('movie-card');
+		card.setAttribute('data-movie-id', movie.id);
+
+		card.innerHTML = /*html */ `
+            <img src="${IMAGE_BASE_URL}w500${movie.poster_path}" alt="${
+			movie.title
+		}" class="movie-poster">
+                    <div class="movie-info">
+                        <h2 class="movie-title">${movie.title}</h2>
+                        <p class="movie-rating">★ ${movie.vote_average.toFixed(
+													1
+												)}</p>
+                        <p class="movie-overview">${movie.overview}</p>
+                        <p class="movie-date">Release: ${movie.release_date}</p>
+                    </div>
+
+        `;
+
+		fragment.appendChild(card);
+		showObserver.observe(card);
+	});
+
+	container.appendChild(fragment);
+
+	const lastCard = document.querySelector('.movie-card:last-child');
+	if (lastCard) {
+		lastCardObserver.observe(lastCard);
+	}
+}
+
+// All credit goes to https://www.themoviedb.org/
